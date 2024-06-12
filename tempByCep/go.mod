@@ -1,4 +1,4 @@
-module github.com/JonecoBoy/tempByCep
+module github.com/JonecoBoy/otel-cep/tempByCep
 
 go 1.21
 

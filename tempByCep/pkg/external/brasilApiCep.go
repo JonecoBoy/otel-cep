@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/JonecoBoy/tempByCep/pkg/utils"
+	"github.com/JonecoBoy/otel-cep/tempByCep/pkg/utils"
 )
 
 const requestExpirationTime = 10 * time.Second

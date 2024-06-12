@@ -1,8 +1,5 @@
-module github.com/JonecoBoy/otel/inputApp
+module github.com/JonecoBoy/otel-cep/inputApp
 
-go 1.22.4
+go 1.21
 
-require (
-	github.com/JonecoBoy/tempByCep v1.2.0
-	golang.org/x/text v0.16.0
-)
+require golang.org/x/text v0.16.0

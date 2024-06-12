@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/JonecoBoy/otel/inputApp/pkg/utils"
+	"github.com/JonecoBoy/otel-cep/inputApp/pkg/utils"
 	"io"
 	"net/http"
 	"time"

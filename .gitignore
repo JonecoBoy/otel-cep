@@ -1,2 +1,3 @@
 
-tempByCep/dist/
+dist
+.goreleaser.yaml

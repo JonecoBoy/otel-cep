@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/JonecoBoy/tempByCep/pkg/utils"
+	"github.com/JonecoBoy/otel-cep/tempByCep/pkg/utils"
 )
 
 type AddressDataViaCep struct {

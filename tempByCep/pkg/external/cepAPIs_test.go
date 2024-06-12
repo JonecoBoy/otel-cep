@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JonecoBoy/tempByCep/pkg/utils"
+	"github.com/JonecoBoy/otel-cep/tempByCep/pkg/utils"
 )
 
 func TestViaCep(t *testing.T) {
