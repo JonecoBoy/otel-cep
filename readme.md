@@ -8,11 +8,9 @@
 docker-compose up --build -d
 ```
 
-# Executar com binary
-Ir na aba de releases, baixar de acordo com a plataforma e arquitetura desejada e executar os 2 binários
-```shell
-docker-compose up --build -d
-```
+para testar request pode-se usar os arquivos http dentro da inputApp
+
+
 
 ## Serviço A  -> Receber o CEP e validar string -> InputApp
 porta 8091
@@ -21,4 +19,3 @@ porta 8091
 porta 8090
 
 
-para testar request pode-se usar os arquivos http dentro da inputApp

@@ -42,7 +42,7 @@ func GetTempByCep(cep string) (TempByCepResponse, error) {
 	// o contexto expira em 1 segundo!
 	ctx, cancel := context.WithTimeout(ctx, requestExpirationTime)
 	defer cancel() // de alguma forma nosso contexto será cancelado
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:8090/temp/"+cep, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://tempbycep:8090/temp/"+cep, nil)
 
 	if err != nil {
 		return TempByCepResponse{}, err
