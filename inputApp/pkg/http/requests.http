@@ -1,0 +1,19 @@
+### correct
+POST http://localhost:8091/25900028
+Accept: application/json
+Content-Type: application/json
+
+{
+  "cep": "25900-028"
+}
+
+### invalidZipCode
+POST http://localhost:8091/99900028
+Accept: application/json
+Content-Type: application/json
+
+{
+  "cep": "2590012334"
+}
+
+

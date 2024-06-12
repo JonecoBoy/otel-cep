@@ -1,0 +1,11 @@
+### correct
+GET http://localhost:8090/temp/25900028
+Accept: application/json
+
+### ZIP not exists but format OK
+GET http://localhost:8090/temp/99900028
+Accept: application/json
+
+### ZIP bad format
+GET http://localhost:8090/temp/245A159B
+Accept: application/json
