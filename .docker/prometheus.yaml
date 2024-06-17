@@ -5,3 +5,12 @@ scrape_configs:
       - targets: ['otel-collector:8889']
       - targets: ['otel-collector:8888']
 # targets onde o prometeus fica buscando infos do collector
+  # jobs para pegar dados do open telemetry das aplicacoes em si, nao das requests
+  - job_name: 'tempbycep'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['tempbycep:8090']
+  - job_name: 'inputapp'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['inputapp:8091']

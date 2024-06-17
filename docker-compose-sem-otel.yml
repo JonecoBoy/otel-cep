@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  tempbycep:
+    build: tempByCep/.
+    ports:
+      - "8090:8090"
+  inputapp:
+    build: inputApp/.
+    ports:
+      - "8091:8091"
