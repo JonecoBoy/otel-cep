@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,7 +11,7 @@ import (
 
 func TestViaCep(t *testing.T) {
 	cep := "20541155"
-	result, err := ViaCep(cep)
+	result, err := ViaCep(context.Background(), cep)
 	if err != nil {
 		t.Errorf("ViaCep() returned an error: %v", err)
 	}
@@ -34,7 +35,7 @@ func TestViaCep(t *testing.T) {
 
 func TestViaCepZipNotFound(t *testing.T) {
 	cep := "90541155"
-	_, err := ViaCep(cep)
+	_, err := ViaCep(context.Background(), cep)
 	if err == nil {
 		t.Fatalf("ViaCep() returned a value instead of an err: %v", err)
 	}
@@ -46,7 +47,7 @@ func TestViaCepZipNotFound(t *testing.T) {
 
 func TestViaCepInvalidFormat(t *testing.T) {
 	cep := "905411551"
-	_, err := ViaCep(cep)
+	_, err := ViaCep(context.Background(), cep)
 	if err == nil {
 		t.Fatalf("ViaCep() returned a value instead of an err: %v", err)
 	}
@@ -57,7 +58,7 @@ func TestViaCepInvalidFormat(t *testing.T) {
 
 func TestBrasilApiCep(t *testing.T) {
 	cep := "20541155"
-	result, err := BrasilApiCep(cep)
+	result, err := BrasilApiCep(context.Background(), cep)
 	if err != nil {
 		t.Errorf("BrasilApiCep() returned an error: %v", err)
 	}
@@ -81,7 +82,7 @@ func TestBrasilApiCep(t *testing.T) {
 
 func TestBrasilApiCepZipNotFound(t *testing.T) {
 	cep := "90541155"
-	_, err := BrasilApiCep(cep)
+	_, err := BrasilApiCep(context.Background(), cep)
 	if err == nil {
 		t.Fatalf("BrasilApi() returned a value instead of an err: %v", err)
 	}
@@ -93,7 +94,7 @@ func TestBrasilApiCepZipNotFound(t *testing.T) {
 
 func TestBrasilApiCepInvalidFormat(t *testing.T) {
 	cep := "90541A155"
-	_, err := BrasilApiCep(cep)
+	_, err := BrasilApiCep(context.Background(), cep)
 	if err == nil {
 		t.Fatalf("ViaCep() returned a value instead of an err: %v", err)
 	}

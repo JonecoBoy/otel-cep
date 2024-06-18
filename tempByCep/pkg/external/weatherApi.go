@@ -1,9 +1,11 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"io"
 	"net/http"
 	"net/url"
@@ -209,9 +211,15 @@ const baseUrl = "https://api.weatherapi.com/v1"
 
 const weatherRequestExpirationTime = 60 * time.Second
 
-func doRequest(method string, path string, params map[string]string) (*http.Response, error) {
+func doRequest(ctx context.Context, method string, path string, params map[string]string) (*http.Response, error) {
 	path = strings.ReplaceAll(path, "/", "")
 	method = strings.ToUpper(method)
+
+	//newPath := ctx.Value("method")
+
+	ctx, externalSpan := otel.GetTracerProvider().Tracer("weather").Start(ctx, "weather-external-"+path)
+	defer externalSpan.End()
+
 	//ctx := context.Background()
 	//ctx, cancel := context.WithTimeout(ctx, weatherRequestExpirationTime)
 	//defer cancel() // de alguma forma nosso contexto será cancelado
@@ -253,15 +261,17 @@ func doRequest(method string, path string, params map[string]string) (*http.Resp
 	return resp, nil
 }
 
-func CurrentWeather(query string, lang string) (CurrentModel, error) {
+func CurrentWeather(ctx context.Context, query string, lang string) (CurrentModel, error) {
 	// Define the parameters for the request
 	params := map[string]string{
 		"q":    query,
 		"lang": lang,
 	}
 
+	ctx = context.WithValue(ctx, "method", "CurrentWeather")
+
 	// Make the request
-	resp, err := doRequest("GET", "current.json", params)
+	resp, err := doRequest(ctx, "GET", "current.json", params)
 	if err != nil {
 		return CurrentModel{}, err
 	}
@@ -283,7 +293,7 @@ func CurrentWeather(query string, lang string) (CurrentModel, error) {
 	return current, nil
 }
 
-func forecast(query string, lang string, days int) (Forecast, error) {
+func forecast(ctx context.Context, query string, lang string, days int) (Forecast, error) {
 	// Define the parameters for the request
 	params := map[string]string{
 		"q":    query,
@@ -292,7 +302,7 @@ func forecast(query string, lang string, days int) (Forecast, error) {
 	}
 
 	// Make the request
-	resp, err := doRequest("GET", "forecast.json", params)
+	resp, err := doRequest(ctx, "GET", "forecast.json", params)
 	if err != nil {
 		return Forecast{}, err
 	}
@@ -314,7 +324,7 @@ func forecast(query string, lang string, days int) (Forecast, error) {
 	return forecast, nil
 }
 
-func ip(ipaddress string) (IP, error) {
+func ip(ctx context.Context, ipaddress string) (IP, error) {
 	// Remove all dots from the IP address
 	ipaddress = strings.ReplaceAll(ipaddress, ".", "")
 
@@ -330,7 +340,7 @@ func ip(ipaddress string) (IP, error) {
 	}
 
 	// Make the request
-	resp, err := doRequest("GET", "ip.json", params)
+	resp, err := doRequest(ctx, "GET", "ip.json", params)
 	if err != nil {
 		return IP{}, err
 	}
@@ -352,9 +362,9 @@ func ip(ipaddress string) (IP, error) {
 	return ip, nil
 }
 
-func search(toSearch string) (searchReturn, error) {
+func search(ctx context.Context, toSearch string) (searchReturn, error) {
 	param := map[string]string{"q": toSearch}
-	resp, err := doRequest("GET", "search.json", param)
+	resp, err := doRequest(ctx, "GET", "search.json", param)
 	if err != nil {
 		panic(err)
 	}
@@ -376,7 +386,7 @@ func search(toSearch string) (searchReturn, error) {
 	return results[0], nil
 }
 
-func future(query string, lang string, date string) (Forecast, error) {
+func future(ctx context.Context, query string, lang string, date string) (Forecast, error) {
 	// Parse the date string into a time.Time value
 	dt, err := time.Parse("2006-01-02", date)
 	if err != nil {
@@ -402,7 +412,7 @@ func future(query string, lang string, date string) (Forecast, error) {
 	}
 
 	// Make the request
-	resp, err := doRequest("GET", "forecast.json", params)
+	resp, err := doRequest(ctx, "GET", "forecast.json", params)
 	if err != nil {
 		return Forecast{}, err
 	}
@@ -424,11 +434,11 @@ func future(query string, lang string, date string) (Forecast, error) {
 	return forecast, nil
 }
 
-func timezone(query string) (TimeZone, error) {
+func timezone(ctx context.Context, query string) (TimeZone, error) {
 	params := map[string]string{
 		"q": query,
 	}
-	response, err := doRequest("GET", "timezone.json", params)
+	response, err := doRequest(ctx, "GET", "timezone.json", params)
 	if err != nil {
 		return TimeZone{}, err
 	}
@@ -447,7 +457,7 @@ func timezone(query string) (TimeZone, error) {
 	return location, nil
 }
 
-func astronomy(query string, date string) (Astronomy, error) {
+func astronomy(ctx context.Context, query string, date string) (Astronomy, error) {
 	// Define the parameters for the request
 	params := map[string]string{
 		"q":  query,
@@ -455,7 +465,7 @@ func astronomy(query string, date string) (Astronomy, error) {
 	}
 
 	// Make the request
-	resp, err := doRequest("GET", "astronomy.json", params)
+	resp, err := doRequest(ctx, "GET", "astronomy.json", params)
 	if err != nil {
 		return Astronomy{}, err
 	}
@@ -477,7 +487,7 @@ func astronomy(query string, date string) (Astronomy, error) {
 	return astronomy, nil
 }
 
-func marine(query string, lang string, days int, date string, unixdt int, hour int) (Marine, error) {
+func marine(ctx context.Context, query string, lang string, days int, date string, unixdt int, hour int) (Marine, error) {
 	params := map[string]string{
 		"q":    query,
 		"days": strconv.Itoa(days),
@@ -498,7 +508,7 @@ func marine(query string, lang string, days int, date string, unixdt int, hour i
 	}
 
 	// Make the request
-	resp, err := doRequest("GET", "marine.json", params)
+	resp, err := doRequest(ctx, "GET", "marine.json", params)
 	if err != nil {
 		return Marine{}, err
 	}

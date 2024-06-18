@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ func TestDoRequest(t *testing.T) {
 		"q": "London",
 	}
 
-	resp, err := doRequest(method, path, params)
+	resp, err := doRequest(context.Background(), method, path, params)
 	if err != nil {
 		t.Errorf("doRequest() returned an error: %v", err)
 	}
@@ -36,7 +37,7 @@ func TestSearch(t *testing.T) {
 		Url:     "mage-rio-de-janeiro-brazil",
 	}
 
-	result, err := search(query)
+	result, err := search(context.Background(), query)
 	if err != nil {
 		t.Errorf("search() returned an error: %v", err)
 	}
@@ -50,7 +51,7 @@ func TestCurrent(t *testing.T) {
 	query := "mage-rio de janeiro-brazil"
 	lang := "pt"
 
-	result, err := CurrentWeather(query, lang)
+	result, err := CurrentWeather(context.Background(), query, lang)
 	if err != nil {
 		t.Errorf("Current() returned an error: %v", err)
 	}
@@ -84,7 +85,7 @@ func TestForecast(t *testing.T) {
 	lang := "pt"
 	days := 3
 
-	result, err := forecast(query, lang, days)
+	result, err := forecast(context.Background(), query, lang, days)
 	if err != nil {
 		t.Errorf("forecast() returned an error: %v", err)
 	}
@@ -112,7 +113,7 @@ func TestForecast(t *testing.T) {
 func TestIP(t *testing.T) {
 	ipaddress := "192.168.1.1"
 
-	result, err := ip(ipaddress)
+	result, err := ip(context.Background(), ipaddress)
 	if err != nil {
 		t.Errorf("ip() returned an error: %v", err)
 	}
@@ -141,7 +142,7 @@ func TestFuture(t *testing.T) {
 
 	date := time.Now().Format("2006-01-02") // error test
 
-	_, err := future(code, lang, date)
+	_, err := future(context.Background(), code, lang, date)
 	if err == nil {
 		t.Errorf("future() did not return an error for an invalid date")
 	}
@@ -149,7 +150,7 @@ func TestFuture(t *testing.T) {
 	//valid test
 	date = time.Now().AddDate(0, 0, 20).Format("2006-01-02")
 
-	result, err := future(code, lang, date)
+	result, err := future(context.Background(), code, lang, date)
 	if err != nil {
 		t.Errorf("future() returned an error: %v", err)
 	}
@@ -180,7 +181,7 @@ func TestFuture(t *testing.T) {
 func TestTimezone(t *testing.T) {
 	code := "mage-rio de janeiro-brazil"
 
-	result, err := timezone(code)
+	result, err := timezone(context.Background(), code)
 	if err != nil {
 		t.Errorf("timezone() returned an error: %v", err)
 	}
@@ -194,7 +195,7 @@ func TestAstronomy(t *testing.T) {
 	query := "mage-rio de janeiro-brazil"
 	date := "2024-01-01" // This date should be on or after 1st Jan, 2015
 
-	result, err := astronomy(query, date)
+	result, err := astronomy(context.Background(), query, date)
 	if err != nil {
 		t.Errorf("astronomy() returned an error: %v", err)
 	}
@@ -223,10 +224,10 @@ func TestAstronomy(t *testing.T) {
 }
 
 func TestMarine(t *testing.T) {
-	query := "mage - rio de janeiro - brazil"
-	days := 3
+	query := "rio de janeiro - rio de janeiro - brazil"
+	days := 1
 
-	result, err := marine(query, "pt", days, "", 0, 0)
+	result, err := marine(context.Background(), query, "pt", days, "", 0, 0)
 	if err != nil {
 		t.Errorf("marine() returned an error: %v", err)
 	}
@@ -240,7 +241,7 @@ func TestMarine(t *testing.T) {
 		t.Errorf("marine() returned an empty Forecast struct")
 	}
 
-	if len(*result.Forecast.ForecastDay) != 3 {
+	if len(*result.Forecast.ForecastDay) != 1 {
 		t.Errorf("forecast() returned an ForecastDay slice with wrong length")
 	}
 

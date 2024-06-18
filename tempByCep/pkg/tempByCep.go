@@ -7,22 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"github.com/JonecoBoy/otel-cep/tempByCep/pkg/external"
+	"github.com/JonecoBoy/otel-cep/tempByCep/pkg/infra/telemetry"
 	"github.com/JonecoBoy/otel-cep/tempByCep/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"log"
-	"net/http"
-	"strings"
-	"time"
-
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"time"
 )
 
 type Result struct {
@@ -40,59 +37,76 @@ type TempResponse struct {
 
 func main() {
 
-	shutdown, err := initProvider("tempByCep", "otel-collector:4317")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	shutdown, err := telemetry.SetupProvider(ctx, "tempByCep")
 	if err != nil {
-		log.Fatal(err)
+		return
+	}
+
+	srv := &http.Server{
+		Addr:         ":8090",
+		BaseContext:  func(_ net.Listener) context.Context { return ctx },
+		ReadTimeout:  time.Second,
+		WriteTimeout: 10 * time.Second,
+		Handler:      mainHttpHanlder(),
 	}
 	defer func() {
-		err := shutdown(context.Background())
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = errors.Join(err, shutdown(context.Background()))
 	}()
 
-	// allow insecure connection
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	mux := http.NewServeMux()
-	// podia ter passado anonima
-	mux.HandleFunc("/cep/", cepHandler)
-	mux.HandleFunc("/temp/", tempHandler)
-	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/", HomeHandler)
-	log.Print("Listening...")
-	http.ListenAndServe(":8090", mux)
+	srvErr := make(chan error, 1)
+	go func() {
+		srvErr <- srv.ListenAndServe()
+	}()
+
+	// Wait for interruption.
+	select {
+	case err = <-srvErr:
+		// Error when starting HTTP server.
+		return
+	case <-ctx.Done():
+		// Wait for first CTRL+C.
+		// Stop receiving signal notifications as soon as possible.
+		stop()
+	}
+
+	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
+	err = srv.Shutdown(context.Background())
+	return
 
 }
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	// header pra propagar nas requests futuras
-	carrier := propagation.HeaderCarrier(r.Header)
-	ctx := r.Context()
-	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
-	//span := trace.SpanFromContext(ctx)
-	span := trace.SpanFromContext(ctx)
-	//spanCtx := span.SpanContext()
-	span.SetName("HomeHandler")
 
-	defer span.End()
-	//injetando o header
-	otel.GetTextMapPropagator().Inject(ctx, carrier)
+func mainHttpHanlder() http.Handler {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	mux := http.NewServeMux()
 
-	//tracer := otel.Tracer("microservice-tracer")
-	w.Write([]byte("pong"))
+	// handleFunc is a replacement for mux.HandleFunc
+	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
+	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+		// Configure the "http.route" for the HTTP instrumentation.
+		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
+		mux.Handle(pattern, handler)
+	}
+
+	mux.Handle("/metrics", promhttp.Handler())
+
+	handleFunc("/cep/", cepHandler)
+	handleFunc("/temp/", tempHandler)
+	//handler := otelhttp.NewHandler(mux, "/")
+	return mux
 }
 
 func cepHandler(w http.ResponseWriter, r *http.Request) {
 	carrier := propagation.HeaderCarrier(r.Header)
+	log.Print(carrier)
 	ctx := r.Context()
 	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
-	//span := trace.SpanFromContext(ctx)
-	span := trace.SpanFromContext(ctx)
-	//spanCtx := span.SpanContext()
-	span.SetName("HomeHandler")
-
+	t := otel.Tracer("cep")
+	ctx, span := t.Start(ctx, "cepHandler")
 	defer span.End()
-	//injetando o header
-	otel.GetTextMapPropagator().Inject(ctx, carrier)
+
 	path := strings.Split(r.URL.Path, "/")
 	if len(path) < 3 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
@@ -101,9 +115,10 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 	cep := path[2]
 	// remove separator if exists
 	cep = strings.ReplaceAll(cep, "-", "")
-	c, err := CepConcurrency(cep)
+	c, err := CepConcurrency(ctx, cep)
 	if err != nil {
 		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusGatewayTimeout) // 504
 		w.Write([]byte(err.Error()))
 		return
 	}
@@ -121,6 +136,12 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func tempHandler(w http.ResponseWriter, r *http.Request) {
+	carrier := propagation.HeaderCarrier(r.Header)
+	ctx := r.Context()
+	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
+	t := otel.Tracer("temp")
+	ctx, span := t.Start(ctx, "tempHandler")
+	defer span.End()
 	path := strings.Split(r.URL.Path, "/")
 	if len(path) < 3 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
@@ -129,7 +150,7 @@ func tempHandler(w http.ResponseWriter, r *http.Request) {
 	cep := path[2]
 	// remove separator if exists
 	cep = strings.ReplaceAll(cep, "-", "")
-	c, err := CepConcurrency(cep)
+	c, err := CepConcurrency(ctx, cep)
 	if err != nil {
 		if err.Error() == "404 can not find zipcode" {
 			w.WriteHeader(http.StatusNotFound) // 422
@@ -137,14 +158,14 @@ func tempHandler(w http.ResponseWriter, r *http.Request) {
 		if err.Error() == "can not find zipcode" {
 			w.WriteHeader(http.StatusUnprocessableEntity) // 404
 		}
-
+		w.WriteHeader(http.StatusGatewayTimeout) // 504
 		w.Write([]byte(err.Error()))
 		return
 	}
 
 	q := strings.Join([]string{utils.RemoveAccents(c.City), utils.RemoveAccents(c.State), "brazil"}, "-")
 
-	temp, err := external.CurrentWeather(q, "pt")
+	temp, err := external.CurrentWeather(ctx, q, "pt")
 	if err != nil {
 		fmt.Println(err.Error())
 		w.Write([]byte(err.Error()))
@@ -173,16 +194,18 @@ func tempHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
-func CepConcurrency(cep string) (external.Address, error) {
+func CepConcurrency(ctx context.Context, cep string) (external.Address, error) {
+	ctx, internalSpan := otel.GetTracerProvider().Tracer("cep").Start(ctx, "concurrency-cep")
+	defer internalSpan.End()
 	c1 := make(chan Result)
 	c2 := make(chan Result)
 
 	go func() {
-		data, err := external.BrasilApiCep(cep)
+		data, err := external.BrasilApiCep(ctx, cep)
 		c1 <- Result{Address: data, Err: err}
 	}()
 	go func() {
-		data, err := external.ViaCep(cep)
+		data, err := external.ViaCep(ctx, cep)
 		c2 <- Result{Address: data, Err: err}
 	}()
 
@@ -197,54 +220,7 @@ func CepConcurrency(cep string) (external.Address, error) {
 			return external.Address{}, res.Err
 		}
 		return res.Address, nil
-	case <-time.After(time.Second * 1):
+	case <-time.After(time.Second * 30):
 		return external.Address{}, errors.New("Timeout Reached, no API returned in time. CEP: " + cep)
 	}
-}
-
-func initProvider(serviceName, collectorURL string) (func(context.Context) error, error) {
-	ctx := context.Background()
-
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceName(serviceName),
-		),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
-	}
-
-	// troca o contexto de atributo para timeout, tenta conectar em 1 segundo se não for vai dar timeout
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, collectorURL,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
-	}
-	// config do exporter do trace. Poderia ser feito via http, mas estou dizendo que será feito via GRPC
-	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
-	}
-
-	// bsp = batch span processor
-	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
-	// o provider via pegar o recurso e o span processor. Ele é o cara que irá fazer com que as infos serão consolidadas. Pelo exporter ele sabe oq vai falar com o grpc
-	tracerProvider := sdktrace.NewTracerProvider(
-		// with Sampler é a amostragem que quer ter par aenviar o trace, em dev ele envia para cada requisicao o trace pra gente (AlwaysSample), se fosse prod para não ter q enviar tudo, poderíamos controlar o exemplo de trace
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(bsp),
-	)
-	otel.SetTracerProvider(tracerProvider)
-
-	// vai propagar a informação usando dados de tracing
-	otel.SetTextMapPropagator(propagation.TraceContext{})
-	// o shutdown desliga de forma graciosa
-	return tracerProvider.Shutdown, nil
 }

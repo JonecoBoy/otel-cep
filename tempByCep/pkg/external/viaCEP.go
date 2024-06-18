@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"io"
 	"net/http"
 
@@ -19,12 +20,15 @@ type AddressDataViaCep struct {
 	Street       string `json:"logradouro"`
 }
 
-func ViaCep(cep string) (Address, error) {
+func ViaCep(ctx context.Context, cep string) (Address, error) {
+	ctx, externalSpan := otel.GetTracerProvider().Tracer("cep").Start(ctx, "viaCep-cep-external")
+	defer externalSpan.End()
+
 	err := utils.ValidateCep(cep)
 	if err != nil {
 		return Address{}, utils.InvalidZipError
 	}
-	ctx := context.Background()
+
 	// o contexto expira em 1 segundo!
 	ctx, cancel := context.WithTimeout(ctx, requestExpirationTime)
 	defer cancel() // de alguma forma nosso contexto será cancelado
