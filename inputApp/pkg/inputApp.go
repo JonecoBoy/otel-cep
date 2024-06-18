@@ -88,8 +88,8 @@ func mainHttpHanlder() http.Handler {
 
 	mux.Handle("/metrics", promhttp.Handler())
 	handleFunc("/", tempHandler)
-	handler := otelhttp.NewHandler(mux, "/")
-	return handler
+	//handler := otelhttp.NewHandler(mux, "/")
+	return mux
 }
 
 func validateCep(cep string) error {

@@ -20,19 +20,23 @@ services:
       - zipkin
       - prometheus
       - otel-collector
-#  jaeger-all-in-one:
-#    image: jaegertracing/all-in-one:latest
-#    restart: always
-#    ports:
-#      - "16686:16686"
-#      - "14268"
-#      - "14250"
+  jaeger-all-in-one:
+    image: jaegertracing/all-in-one:latest
+    restart: always
+    ports:
+      - "16686:16686"
+      - "14268"
+      - "14250"
+    depends_on:
+      - otel-collector
 
   zipkin:
     image: openzipkin/zipkin:latest
     restart: always
     ports:
       - "9411:9411"
+    depends_on:
+      - otel-collector
 
   prometheus:
     container_name: prometheus
@@ -42,7 +46,8 @@ services:
       - ./.docker/prometheus.yaml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
-
+    depends_on:
+      - otel-collector
   otel-collector: #colector do open telemtry rodando como servico
     image: otel/opentelemetry-collector:latest
     restart: always
