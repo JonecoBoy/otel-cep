@@ -1,5 +1,5 @@
 ### invalidZipCode
-POST http://localhost:8091/99900028
+POST http://localhost:8091
 Accept: application/json
 Content-Type: application/json
 
@@ -9,7 +9,7 @@ Content-Type: application/json
 
 
 ### correct
-POST http://localhost:8091/25900028
+POST http://localhost:8091
 Accept: application/json
 Content-Type: application/json
 

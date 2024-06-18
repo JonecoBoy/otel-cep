@@ -4,27 +4,31 @@ services:
     build: tempByCep/.
     ports:
       - "8090:8090"
+    security_opt:
+      - seccomp:unconfined
     depends_on:
-      - jaeger-all-in-one
+      - zipkin
       - prometheus
       - otel-collector
   inputapp:
     build: inputApp/.
     ports:
       - "8091:8091"
+    security_opt:
+      - seccomp:unconfined
     depends_on:
-      - jaeger-all-in-one
+      - zipkin
       - prometheus
       - otel-collector
-  jaeger-all-in-one:
-    image: jaegertracing/all-in-one:latest
-    restart: always
-    ports:
-      - "16686:16686"
-      - "14268"
-      - "14250"
+#  jaeger-all-in-one:
+#    image: jaegertracing/all-in-one:latest
+#    restart: always
+#    ports:
+#      - "16686:16686"
+#      - "14268"
+#      - "14250"
 
-  zipkin-all-in-one:
+  zipkin:
     image: openzipkin/zipkin:latest
     restart: always
     ports:
@@ -51,6 +55,7 @@ services:
       - "8889:8889"   # Prometheus exporter metrics
       - "13133:13133" # health_check extension
       - "4317:4317"   # OTLP gRPC receiver porta principal que o coletor RECEBE, vai usar GRPC
+      - "4318:4318"   # OTLP HTTP receiver porta principal que o coletor RECEBE, vai usar HTTP
       - "55679:55679" # zpages extension
   grafana:
     container_name: grafana

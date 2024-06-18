@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/JonecoBoy/otel-cep/inputApp/pkg/utils"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"io"
 	"net/http"
 	"time"
@@ -33,23 +35,30 @@ type Address struct {
 	Source       string `json:"source"`
 }
 
-func GetTempByCep(cep string) (TempByCepResponse, error) {
+func GetTempByCep(ctx context.Context, cep string) (TempByCepResponse, error) {
+	ctx, externalSpan := otel.GetTracerProvider().Tracer("weather").Start(ctx, "GetTempByCep-external")
+	defer externalSpan.End()
 	err := utils.ValidateCep(cep)
 	if err != nil {
 		return TempByCepResponse{}, utils.InvalidZipError
 	}
-	ctx := context.Background()
-	// o contexto expira em 1 segundo!
-	ctx, cancel := context.WithTimeout(ctx, requestExpirationTime)
-	defer cancel() // de alguma forma nosso contexto será cancelado
+
+	//// o contexto expira em 1 segundo!
+	//ctx, cancel := context.WithTimeout(ctx, requestExpirationTime)
+	//defer cancel() // de alguma forma nosso contexto será cancelado
+
+	ctx, zipcodeQuerySpan := otel.GetTracerProvider().Tracer("weather").Start(ctx, "weather-zipcode-External")
+
 	req, err := http.NewRequestWithContext(ctx, "GET", "http://tempbycep:8090/temp/"+cep, nil)
 
 	if err != nil {
 		return TempByCepResponse{}, err
 	}
+	// propagar otel!  na request
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
-	// faz a request
 	resp, err := http.DefaultClient.Do(req)
+	zipcodeQuerySpan.End()
 
 	if err != nil {
 		return TempByCepResponse{}, err

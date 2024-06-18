@@ -1,13 +1,14 @@
 package external
 
 import (
+	"context"
 	"reflect"
 	"testing"
 )
 
 func TestShouldReturnCepWithCityAndTemperature(t *testing.T) {
 	cep := "20541155"
-	result, err := GetTempByCep(cep)
+	result, err := GetTempByCep(context.Background(), cep)
 	if err != nil {
 		t.Errorf("getTempByCep() returned an error: %v", err)
 	}
@@ -29,7 +30,7 @@ func TestShouldReturnCepWithCityAndTemperature(t *testing.T) {
 
 func TestShouldReturnInvalidZipCodeError(t *testing.T) {
 	cep := "245A159B"
-	result, err := GetTempByCep(cep)
+	result, err := GetTempByCep(context.Background(), cep)
 	if err == nil {
 		t.Errorf("getTempByCep() did not returned an error: %v", err)
 	}
@@ -64,7 +65,7 @@ func TestShouldReturnInvalidZipCodeError(t *testing.T) {
 func TestShouldReturnCanNotFindZipCode(t *testing.T) {
 	//404
 	cep := "99900028"
-	result, err := GetTempByCep(cep)
+	result, err := GetTempByCep(context.Background(), cep)
 	if err == nil {
 		t.Errorf("getTempByCep() did not returned an error: %v", err)
 	}
