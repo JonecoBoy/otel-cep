@@ -27,12 +27,12 @@ func (e HttpError) Error() string {
 
 var InvalidZipError = HttpError{
 	Code:    http.StatusUnprocessableEntity,
-	Message: "invalid zipcode",
+	Message: "422 invalid zipcode",
 }
 
 var ZipNotFoundError = HttpError{
 	Code:    http.StatusNotFound,
-	Message: "can not find zipcode",
+	Message: "404 can not find zipcode",
 }
 
 func ValidateCep(cep string) error {

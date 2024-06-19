@@ -141,10 +141,10 @@ func tempHandler(w http.ResponseWriter, r *http.Request) {
 
 	c, err := external.GetTempByCep(ctx, cep)
 	if err != nil {
-		if err.Error() == "404 can not find zipcode" {
-			w.WriteHeader(http.StatusNotFound) // 422
+		if err.Error() == "422 invalid zipcode" {
+			w.WriteHeader(http.StatusUnprocessableEntity) // 422
 		}
-		if err.Error() == "can not find zipcode" {
+		if err.Error() == "404 can not find zipcode" {
 			w.WriteHeader(http.StatusUnprocessableEntity) // 404
 		}
 
