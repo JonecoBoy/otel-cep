@@ -94,6 +94,7 @@ func mainHttpHanlder() http.Handler {
 
 	handleFunc("/cep/", cepHandler)
 	handleFunc("/temp/", tempHandler)
+	// remover para não poluir o zipkin da atividade com as rotas de metrics
 	//handler := otelhttp.NewHandler(mux, "/")
 	return mux
 }
@@ -117,7 +118,12 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 	cep = strings.ReplaceAll(cep, "-", "")
 	c, err := CepConcurrency(ctx, cep)
 	if err != nil {
-		fmt.Println(err.Error())
+		if err.Error() == "422 invalid zipcode" {
+			w.WriteHeader(http.StatusUnprocessableEntity) // 422
+		}
+		if err.Error() == "404 can not find zipcode" {
+			w.WriteHeader(http.StatusNotFound) // 404
+		}
 		w.WriteHeader(http.StatusGatewayTimeout) // 504
 		w.Write([]byte(err.Error()))
 		return
@@ -152,11 +158,11 @@ func tempHandler(w http.ResponseWriter, r *http.Request) {
 	cep = strings.ReplaceAll(cep, "-", "")
 	c, err := CepConcurrency(ctx, cep)
 	if err != nil {
-		if err.Error() == "404 can not find zipcode" {
-			w.WriteHeader(http.StatusNotFound) // 422
+		if err.Error() == "422 invalid zipcode" {
+			w.WriteHeader(http.StatusUnprocessableEntity) // 422
 		}
-		if err.Error() == "can not find zipcode" {
-			w.WriteHeader(http.StatusUnprocessableEntity) // 404
+		if err.Error() == "404 can not find zipcode" {
+			w.WriteHeader(http.StatusNotFound) // 404
 		}
 		w.WriteHeader(http.StatusGatewayTimeout) // 504
 		w.Write([]byte(err.Error()))
