@@ -10,14 +10,9 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"io"
 	"net/http"
-	"time"
 )
 
-const requestExpirationTime = 10 * time.Second
-
-func main() {
-
-}
+//const requestExpirationTime = 10 * time.Second
 
 type TempByCepResponse struct {
 	City   string  `json:"city"`
@@ -47,8 +42,6 @@ func GetTempByCep(ctx context.Context, cep string) (TempByCepResponse, error) {
 	//ctx, cancel := context.WithTimeout(ctx, requestExpirationTime)
 	//defer cancel() // de alguma forma nosso contexto será cancelado
 
-	ctx, zipcodeQuerySpan := otel.GetTracerProvider().Tracer("weather").Start(ctx, "weather-zipcode-External")
-
 	req, err := http.NewRequestWithContext(ctx, "GET", "http://tempbycep:8090/temp/"+cep, nil)
 
 	if err != nil {
@@ -58,7 +51,6 @@ func GetTempByCep(ctx context.Context, cep string) (TempByCepResponse, error) {
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := http.DefaultClient.Do(req)
-	zipcodeQuerySpan.End()
 
 	if err != nil {
 		return TempByCepResponse{}, err

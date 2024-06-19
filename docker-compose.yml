@@ -6,29 +6,21 @@ services:
       - "8090:8090"
     security_opt:
       - seccomp:unconfined
-    depends_on:
-      - zipkin
-      - prometheus
-      - otel-collector
   inputapp:
     build: inputApp/.
     ports:
       - "8091:8091"
     security_opt:
       - seccomp:unconfined
-    depends_on:
-      - zipkin
-      - prometheus
-      - otel-collector
-  jaeger-all-in-one:
-    image: jaegertracing/all-in-one:latest
-    restart: always
-    ports:
-      - "16686:16686"
-      - "14268"
-      - "14250"
-    depends_on:
-      - otel-collector
+#  jaeger-all-in-one:
+#    image: jaegertracing/all-in-one:latest
+#    restart: always
+#    ports:
+#      - "16686:16686"
+#      - "14268"
+#      - "14250"
+#    depends_on:
+#      - otel-collector
 
   zipkin:
     image: openzipkin/zipkin:latest
@@ -38,16 +30,16 @@ services:
     depends_on:
       - otel-collector
 
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus:latest
-    restart: always
-    volumes: #arquivo de config do prometeus
-      - ./.docker/prometheus.yaml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    depends_on:
-      - otel-collector
+#  prometheus:
+#    container_name: prometheus
+#    image: prom/prometheus:latest
+#    restart: always
+#    volumes: #arquivo de config do prometeus
+#      - ./.docker/prometheus.yaml:/etc/prometheus/prometheus.yml
+#    ports:
+#      - "9090:9090"
+#    depends_on:
+#      - otel-collector
   otel-collector: #colector do open telemtry rodando como servico
     image: otel/opentelemetry-collector:latest
     restart: always
@@ -62,11 +54,11 @@ services:
       - "4317:4317"   # OTLP gRPC receiver porta principal que o coletor RECEBE, vai usar GRPC
       - "4318:4318"   # OTLP HTTP receiver porta principal que o coletor RECEBE, vai usar HTTP
       - "55679:55679" # zpages extension
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:latest
-    restart: always
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
+#  grafana:
+#    container_name: grafana
+#    image: grafana/grafana:latest
+#    restart: always
+#    ports:
+#      - "3000:3000"
+#    depends_on:
+#      - prometheus
