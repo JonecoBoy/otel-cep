@@ -34,7 +34,8 @@ curl --location 'http://localhost:8090/temp/20541155'
 ![Traces](./static/img.png)
 1. Handler/Controller que recebe a request no Serviço A
 2. Request feita do Serviço A para o Serviço B
-3. Grupo de Requests Concorrentes com go routines feitas pelo Serviço B
-4. Request externa Via CEP
-5.  Request externa Via Brasil CEP (VENCEDORA NESTA FOTO)
-6. Request externa com o CEP retornado por uma das APIS para pegar a temperatura na WheaterAPI
+3. Handler que recebe a request no Serviço B
+4. Grupo de Requests Concorrentes com go routines feitas pelo Serviço B
+5. Request externa Via CEP
+6.  Request externa Via Brasil CEP (VENCEDORA NESTA FOTO)
+7. Request externa com o CEP retornado por uma das APIS para pegar a temperatura na WheaterAPI
